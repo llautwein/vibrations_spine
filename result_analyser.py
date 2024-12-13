@@ -38,13 +38,25 @@ class MSSMAnalyser(ResultAnalyser):
         if mode == "sinusoidal":
             sine_amplitude = kwargs.get("sine_amplitude", 0)
             sine_hertz = kwargs.get("sine_hertz", 0)
-            sine_frequency = sine_hertz * 2 * np.pi
-
-            spine_model = mssm.MassSpringSpineModel(self.model_constants, sine_amplitude, sine_frequency)
+            spine_model = mssm.MassSpringSpineModel(self.model_constants, "sinusoidal",
+                                                    sine_amplitude=sine_amplitude, sine_hertz=sine_hertz)
             sol, dri = spine_model.solve(t_span, self.y0, t_eval)
 
             plt.figure()
-            plt.plot(sol.t / sine_frequency, sol.y[self.n-2] * 1000, label="Displacement of the head")
+            plt.plot(sol.t / (sine_hertz*2*np.pi), sol.y[self.n-1]*1000, label="Displacement of the head for sine")
+            plt.xlabel("Time t [s]")
+            plt.ylabel("Relative Displacement y [mm]")
+            plt.show()
+        elif mode == "impulsive":
+            impulse_amplitude = kwargs.get("impulse_amplitude", 0)
+            impulse_peak = kwargs.get("impulse_peak", 0)
+            eps = kwargs.get("eps", 0)
+            spine_model = mssm.MassSpringSpineModel(self.model_constants, "impulsive", impulse_amplitude=impulse_amplitude,
+                                                    impulse_peak=impulse_peak, eps=eps)
+            sol, dri = spine_model.solve(t_span, self.y0, t_eval)
+
+            plt.figure()
+            plt.plot(sol.t, sol.y[self.n - 1]*1000, label="Displacement of the head for impulse")
             plt.xlabel("Time t [s]")
             plt.ylabel("Relative Displacement y [mm]")
             plt.show()
@@ -83,6 +95,22 @@ class MSSMAnalyser(ResultAnalyser):
         plt.plot(sine_amplitudes, dri_values)
         plt.xlabel('Sinusoidal amplitude [Unit?]')
         plt.ylabel('Dynamic Response Index')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+    def amplitude_max_displacements(self, t_span, t_eval, sine_amplitudes):
+        max_displacements = []
+        for i in range(len(sine_amplitudes)):
+            print(f"Amplitude displacement plot: solving for A={round(sine_amplitudes[i], 2)}")
+            spine_model = mssm.MassSpringSpineModel(self.model_constants, sine_amplitudes[i], self.natural_frequency)
+            sol, dri = spine_model.solve(t_span, self.y0, t_eval)
+            max_displacements.append(1000*max(abs(sol.y[len(self.model_constants.m)-1])))
+
+        plt.figure()
+        plt.plot(sine_amplitudes, max_displacements)
+        plt.xlabel('Sinusoidal amplitude [Unit?]')
+        plt.ylabel('Maximal displacement')
         plt.legend()
         plt.grid(True)
         plt.show()

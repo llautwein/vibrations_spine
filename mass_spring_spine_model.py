@@ -5,10 +5,8 @@ from scipy.integrate import solve_ivp
 class MassSpringSpineModel:
     """
     Models transmission of vibrations through the human spine as one-dimensional chain of damped springs.
-    In this model, there is no further damping by a cushion involved, the impact of the vibration happen
-    directly on the pelvis.
     """
-    def __init__(self, constant_handler, A, omega):
+    def __init__(self, constant_handler, mode, **kwargs):
         """
         Class variables:
 
@@ -23,8 +21,15 @@ class MassSpringSpineModel:
         self.n = len(self.m)
         self.k = constant_handler.k
         self.c = constant_handler.c
-        self.A = A
-        self.omega = omega
+        self.mode = mode
+        if mode == "sinusoidal":
+            self.sine_amplitude = kwargs.get("sine_amplitude", 0)
+            self.omega = kwargs.get("sine_hertz", 0) * 2 * np.pi
+        if mode == "impulsive":
+            self.omega = 1
+            self.impulse_amplitude = kwargs.get("impulse_amplitude", 0)
+            self.impulse_peak = kwargs.get("impulse_peak", 0)
+            self.eps = kwargs.get("eps", 0)
         self.setup_system()
 
     def setup_system(self):
@@ -40,7 +45,7 @@ class MassSpringSpineModel:
         for i in range(0, self.n - 1):
             left_lower[i, i] = (- self.k[i] - self.k[i+1]) / (self.m[i] * self.omega**2)
             left_lower[i + 1, i] = self.k[i+1] / (self.m[i+1] * self.omega**2)
-            left_lower[i, i + 1] = self.k[i+1] / (self.m[1] * self.omega**2)
+            left_lower[i, i + 1] = self.k[i+1] / (self.m[i] * self.omega**2)
             right_lower[i, i] = (- self.c[i] - self.c[i+1]) / (self.m[i] * self.omega)
             right_lower[i + 1, i] = self.c[i+1] / (self.m[i+1] * self.omega)
             right_lower[i, i + 1] = self.c[i+1] / (self.m[i] * self.omega)
@@ -50,16 +55,21 @@ class MassSpringSpineModel:
             [left_lower, right_lower]
         ])
         b = np.zeros(self.n * 2)
-        b[self.n] = self.A/(self.m[0]*self.omega**2)
+        if self.mode == "sinusoidal":
+            b[self.n] = self.sine_amplitude/(self.m[0]*self.omega**2)
+        elif self.mode == "impulsive":
+            b[self.n] = self.impulse_amplitude/(self.m[0])
         self.force_vector = b
 
-    def ode_system(self, t, y, system_matrix, force_vector):
-        dydt = system_matrix @ y + force_vector * np.sin(t)
+    def ode_system(self, t, y):
+        if self.mode == "sinusoidal":
+            dydt = self.system_matrix @ y + self.force_vector * np.sin(t)
+        elif self.mode == "impulsive":
+            dydt = self.system_matrix @ y + self.force_vector * np.exp(-(t - self.impulse_peak)**2/self.eps)
         return dydt
 
     def solve(self, t_span, y0, t_eval):
-        sol = solve_ivp(self.ode_system, t_span, y0, args=(self.system_matrix, self.force_vector),
-                        method="RK45", atol=1e-7, rtol=1e-7, t_eval=t_eval)
+        sol = solve_ivp(self.ode_system, t_span, y0, atol=1e-12, rtol=1e-12, t_eval=t_eval, method="RK45")
         dri = self.dri(sol)
         return sol, dri
 

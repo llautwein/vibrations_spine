@@ -13,6 +13,15 @@ class ConstantsHandler:
         pass
 
 
+class test(ConstantsHandler):
+
+    def __init__(self):
+        super().__init__()
+        self.m = [34.51, 34.51, 34.51, 34.51]
+        self.k = [9.66e4, 9.66e4, 9.66e4, 9.66e4]
+        self.c = [818.1, 818.1, 818.1, 818.1]
+
+
 class SDOFModel(ConstantsHandler):
     """
     Single degree of freedom model (one mass one spring)
@@ -25,9 +34,10 @@ class SDOFModel(ConstantsHandler):
         self.c = [818.1]
 
 
-class MDOFModel(ConstantsHandler):
+class MDOFModel26(ConstantsHandler):
     """
-    Multiple degrees of freedom with 26 masses -> 24 vertebrae correspond to lumbar, thoracic and cervical spine.
+    Models the human spine with multiple degrees of freedom with 26 masses:
+    -> 24 vertebrae correspond to lumbar, thoracic and cervical spine.
     The sacrum and coccyx consists of 9 vertebrae which are fused together. Therefore, they are assumed to be just
     one bigger mass. Similarly, the head is assumed to be another big mass attached to the end of the spine.
     In this case, there is no seat considered. Thus, the force is directly exerted on the sacrum with no additional
@@ -84,3 +94,47 @@ class MDOFModel(ConstantsHandler):
 
         self.c = (damping_sacrum_spine + damping_lumbar_spine + damping_thoracic_spine +
                   damping_cervical_spine + damping_head)
+
+
+class MDOFModel5(ConstantsHandler):
+
+    def __init__(self):
+        super().__init__()
+        self.m = [10, 25, 20, 4, 5]
+        self.k = [9860, 24649, 19719, 3943, 4805]
+        self.c = [141, 352, 281, 56, 70]
+
+
+class CushionMDOFModel26(MDOFModel26):
+    """
+    Models the effect of further damping with a seat cushion by adding one more mass below the spine
+    which is modelled by the MDOF model from above. The mass and spring constant of the cushion are
+    taken from literature while we vary the damping coefficient based on the damping ratio.
+    """
+
+    def __init__(self, cushion_damping_ratio):
+        super().__init__()
+        m_cushion = 3
+        k_cushion = 20000
+        c_cushion = 2 * cushion_damping_ratio * np.sqrt(m_cushion * k_cushion)
+        self.m = [m_cushion] + self.m
+        self.k = [k_cushion] + self.k
+        self.c = [c_cushion] + self.c
+
+
+class CushionMDOFModel5(MDOFModel5):
+    """
+    Models the effect of further damping with a seat cushion by adding one more mass below the spine
+    which is modelled by the MDOF model from above. The mass and spring constant of the cushion are
+    taken from literature while we vary the damping coefficient based on the damping ratio.
+    """
+
+    def __init__(self, cushion_damping_ratio):
+        super().__init__()
+        m_cushion = 3
+        k_cushion = 20000
+        c_cushion = 2 * cushion_damping_ratio * np.sqrt(m_cushion * k_cushion)
+        self.m = [m_cushion] + self.m
+        self.k = [k_cushion] + self.k
+        self.c = [c_cushion] + self.c
+
