@@ -13,15 +13,6 @@ class ConstantsHandler:
         pass
 
 
-class test(ConstantsHandler):
-
-    def __init__(self):
-        super().__init__()
-        self.m = [34.51, 34.51, 34.51, 34.51]
-        self.k = [9.66e4, 9.66e4, 9.66e4, 9.66e4]
-        self.c = [818.1, 818.1, 818.1, 818.1]
-
-
 class SDOFModel(ConstantsHandler):
     """
     Single degree of freedom model (one mass one spring)

@@ -68,8 +68,8 @@ class MassSpringSpineModel:
             dydt = self.system_matrix @ y + self.force_vector * np.exp(-(t - self.impulse_peak)**2/self.eps)
         return dydt
 
-    def solve(self, t_span, y0, t_eval):
-        sol = solve_ivp(self.ode_system, t_span, y0, atol=1e-12, rtol=1e-12, t_eval=t_eval, method="RK45")
+    def solve(self, t_span, y0):
+        sol = solve_ivp(self.ode_system, t_span, y0, atol=1e-12, rtol=1e-12, method="RK45")
         dri = self.dri(sol)
         return sol, dri
 
