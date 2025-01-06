@@ -92,7 +92,7 @@ class MDOFModel5(ConstantsHandler):
     def __init__(self):
         super().__init__()
         self.m = [10, 25, 20, 4, 5]
-        self.k = [9860, 24649, 19719, 3943, 4805]
+        self.k = [9860, 24649, 19719, 3943, 4930]
         self.c = [141, 352, 281, 56, 70]
 
 
@@ -125,7 +125,10 @@ class CushionMDOFModel5(MDOFModel5):
         m_cushion = 3
         k_cushion = 20000
         c_cushion = 2 * cushion_damping_ratio * np.sqrt(m_cushion * k_cushion)
-        self.m = [m_cushion] + self.m
-        self.k = [k_cushion] + self.k
-        self.c = [c_cushion] + self.c
+        scale_m = 1e0
+        scale_k = 1e0
+        scale_c = 1e0
+        self.m = scale_m * np.array([m_cushion] + self.m)
+        self.k = scale_k * np.array([k_cushion] + self.k)
+        self.c = scale_c * np.array([c_cushion] + self.c)
 

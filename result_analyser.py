@@ -4,7 +4,7 @@ import matplotlib.pylab as pylab
 import mass_spring_spine_model as mssm
 import constants_handler
 
-# ToDo: Impulsive forcing: plot for maximal displacement of the head vs. amplitude for different damping ratios
+# ToDo: maybe plot for head acceleration -> further analysis of frequency effects
 
 
 class ResultAnalyser:
@@ -54,11 +54,11 @@ class MSSMAnalyser(ResultAnalyser):
                 plt.plot(sol.t / (sine_hertz * 2 * np.pi), sol.y[0] * 1000, label=labels[0])
                 plt.plot(sol.t / (sine_hertz * 2 * np.pi), sol.y[self.n-1] * 1000, label=labels[1], color="r")
             else:
-                plt.plot(sol.t / (sine_hertz*2*np.pi), sol.y[self.n-1]*1000, label="Displacement of the head for sine")
+                plt.plot(sol.t / (sine_hertz*2*np.pi), sol.y[self.n-1]*1000)
             plt.xlabel("Time t [s]")
             plt.ylabel("Relative Displacement [mm]")
             plt.grid(True)
-            plt.legend()
+            plt.legend(loc="upper right")
             plt.show()
         elif mode == "impulsive":
             impulse_amplitude = kwargs.get("impulse_amplitude", 0)
@@ -81,9 +81,9 @@ class MSSMAnalyser(ResultAnalyser):
             plt.grid(True)
             plt.show()
 
-    def frequency_head_displacement_sine(self, t_span, sine_hertz_values, sine_amplitude):
+    def time_head_displacement_sine(self, t_span, sine_hertz_values, sine_amplitude):
         """
-        Plots head displacement for different frequencies
+        Plots head displacement against time for different frequencies
         :param t_span: Interval in seconds
         :param sine_hertz_values: Hertz of the sinusoidal vibration
         :param sine_amplitude: Amplitude of sine function
@@ -108,7 +108,7 @@ class MSSMAnalyser(ResultAnalyser):
             plt.plot(t_values[j], solutions[j]*1000, label=labels[j])
         plt.xlabel("Time t [s]")
         plt.ylabel("Relative Displacement of the head [mm]")
-        plt.legend(loc="upper right")
+        plt.legend(loc="upper left")
         plt.grid(True)
         plt.show()
 
@@ -119,12 +119,12 @@ class MSSMAnalyser(ResultAnalyser):
         :param sine_amplitude: Amplitude of the sine
         :return: Plot
         """
-        scale = np.linspace(0.5, 2, 100)
+        scale = np.linspace(0.5, 1.75, 50)
         frequencies = scale * self.natural_frequency / (2*np.pi)
         max_displacements = []
         dri_values = []
         for i in range(len(frequencies)):
-            print(f"Resonance test: solving for omega={round(frequencies[i]/(2*np.pi), 2)}")
+            print(f"Resonance test: solving for omega={round(frequencies[i], 2)}")
             spine_model = mssm.MassSpringSpineModel(self.model_constants, "sinusoidal",
                                                     sine_amplitude=sine_amplitude, sine_hertz=frequencies[i])
             t_span[1] *= frequencies[i] * 2 * np.pi
@@ -155,7 +155,7 @@ class MSSMAnalyser(ResultAnalyser):
         final_result = []
         labels = []
         for i in range(len(damping_ratios)):
-            print(f"Amplitude displacement plot: solving for damping ratio={round(damping_ratios[i], 2)}")
+            print(f"Amplitude displacement (sine): solving for damping ratio={round(damping_ratios[i], 2)}")
             self.model_constants = constants_handler.CushionMDOFModel5(damping_ratios[i])
             max_displacements = []
             for j in range(len(sine_amplitudes)):
@@ -212,6 +212,60 @@ class MSSMAnalyser(ResultAnalyser):
         plt.grid(True)
         plt.show()
 
+    def amplitude_max_displacements_impulsive(self, damping_ratios, t_span, impulse_amplitudes, impulse_peak):
+        """
+        Plots the maximal displacement of the head in dependency of the impulse amplitude for various damping ratios
+        :param damping_ratios: Damping ratios of the cushion
+        :param t_span: Time interval in seconds
+        :param impulse_amplitudes: Amplitudes of the impulse
+        :param impulse_peak: Time in seconds at which the impulse peaks
+        :return: Plot
+        """
+        final_result = []
+        labels = []
+        for i in range(len(damping_ratios)):
+            print(f"Amplitude displacement (impulsive): solving for damping ratio={round(damping_ratios[i], 2)}")
+            self.model_constants = constants_handler.CushionMDOFModel5(damping_ratios[i])
+            max_displacements = []
+            for j in range(len(impulse_amplitudes)):
+                spine_model = mssm.MassSpringSpineModel(self.model_constants, "impulsive",
+                                                        impulse_amplitude=impulse_amplitudes[j], impulse_peak=impulse_peak,
+                                                        eps=1e-3)
+                sol, dri = spine_model.solve(t_span, self.y0)
+                max_displacements.append(1000 * max(abs(sol.y[len(self.model_constants.m) - 1])))
+            final_result.append(max_displacements)
+            labels.append(f"Damping ratio = {damping_ratios[i]}")
 
+        plt.figure()
+        for k in range(len(damping_ratios)):
+            plt.plot(impulse_amplitudes, final_result[k], label=labels[k])
+        plt.xlabel('Impulse amplitude [N]')
+        plt.ylabel('Maximal displacement of the head [mm]')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+    def time_head_displacement_impulsive(self, t_span, impulse_amplitudes, impulse_peak):
+
+        t_values = []
+        solutions = []
+        labels = []
+        for i in range(len(impulse_amplitudes)):
+            spine_model = mssm.MassSpringSpineModel(self.model_constants, "impulsive",
+                                                    impulse_amplitude=impulse_amplitudes[i], impulse_peak=impulse_peak,
+                                                    eps=1e-3)
+            sol, dri = spine_model.solve(t_span, self.y0)
+            solutions.append(sol.y[self.n - 1])
+            t_values.append(sol.t)
+            labels.append(f"{impulse_amplitudes[i]} N")
+
+        plt.figure()
+        for j in range(len(impulse_amplitudes)):
+            plt.plot(t_values[j], solutions[j] * 1000, label=labels[j])
+        plt.xlabel("Time t [s]")
+        plt.ylabel("Relative Displacement of the head [mm]")
+        plt.legend(loc="upper right")
+        plt.grid(True)
+        plt.show()
 
 
